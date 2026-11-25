@@ -1,0 +1,38 @@
+name: Build Windows Rack module
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    env:
+      RACK_SDK_VERSION: 2.6.6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            make curl tar unzip zip jq zstd
+      - name: Get official Rack SDK
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          mkdir -p .sdk
+          curl --fail --location --retry 3 "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-win-x64.zip" -o .sdk/Rack-SDK.zip
+          unzip -q .sdk/Rack-SDK.zip -d .sdk
+          test -f .sdk/Rack-SDK/plugin.mk
+      - name: Compile and package actual Rack plugin
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          make -j2 RACK_DIR="$PWD/.sdk/Rack-SDK" dist
+          test -n "$(find dist -name '*.vcvplugin' -print -quit)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fractolian-Windows-x64
+          path: dist/*.vcvplugin
+          if-no-files-found: error

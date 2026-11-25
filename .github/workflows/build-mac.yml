@@ -1,0 +1,63 @@
+name: Build Fractolian for macOS
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-mac.yml'
+      - 'src/**'
+      - 'res/**'
+      - 'plugin.json'
+      - 'Makefile'
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            macho: arm64
+          - runner: macos-15-intel
+            arch: x64
+            macho: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    env:
+      ARCH: ${{ matrix.arch }}
+      MACHO: ${{ matrix.macho }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get Rack 2.6.6 SDK and packaging tools
+        run: |
+          set -euo pipefail
+          tools=()
+          for tool in jq zstd; do
+            command -v "$tool" >/dev/null || tools+=("$tool")
+          done
+          if (( ${#tools[@]} )); then brew install "${tools[@]}"; fi
+          curl -fsSL --retry 3 "https://vcvrack.com/downloads/Rack-SDK-2.6.6-mac-$ARCH.zip" -o "$RUNNER_TEMP/sdk.zip"
+          unzip -q "$RUNNER_TEMP/sdk.zip" -d "$RUNNER_TEMP"
+      - name: Compile and check installable package
+        run: |
+          set -euo pipefail
+          slug=$(jq -er .slug plugin.json)
+          version=$(jq -er .version plugin.json)
+          make -j2 RACK_DIR="$RUNNER_TEMP/Rack-SDK" dist
+          package="dist/$slug-$version-mac-$ARCH.vcvplugin"
+          mkdir "$RUNNER_TEMP/check"
+          zstd -dc "$package" | tar -xf - -C "$RUNNER_TEMP/check"
+          plugin="$RUNNER_TEMP/check/$slug/plugin.dylib"
+          test "$(lipo -archs "$plugin")" = "$MACHO"
+          codesign --verify --strict "$plugin"
+          otool -L "$plugin" | grep -F '/tmp/Rack2/libRack.dylib'
+          nm -gjU "$plugin" | grep -x '_init'
+          cmp plugin.json "$RUNNER_TEMP/check/$slug/plugin.json"
+          cmp res/FractalXY.svg "$RUNNER_TEMP/check/$slug/res/FractalXY.svg"
+          mv "$package" "dist/Fractolian-$version-mac-$ARCH.vcvplugin"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fractolian-mac-${{ matrix.arch }}
+          path: dist/*.vcvplugin
+          if-no-files-found: error

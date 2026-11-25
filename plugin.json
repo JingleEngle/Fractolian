@@ -1,0 +1,22 @@
+{
+  "slug": "JingleEngleFractal",
+  "name": "Fractolian",
+  "version": "2.3.6",
+  "license": "GPL-3.0-or-later",
+  "sourceUrl": "https://github.com/JingleEngle/Fractolian",
+  "brand": "JingleEngle",
+  "author": "John Winter Engle",
+  "modules": [
+    {
+      "slug": "FractalXY",
+      "name": "Fractolian",
+      "description": "Four-seed fractal oscillator with ten formulas, adaptive Position, three scan modes, XY morphing, polyphonic CV and 16 tone memories.",
+      "tags": [
+        "Oscillator",
+        "Waveshaper",
+        "Random",
+        "Polyphonic"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+.sdk/
+build/
+dist/
+plugin.dll
+plugin.so
+plugin.dylib
+tests/test_dsp
+tests/test_dsp.exe
+tests/test_dsp_sanitized
+*.o
+*.d
+
+tests/test_adapter
+tests/test_adapter.exe
+tests/test_adapter_sanitized
